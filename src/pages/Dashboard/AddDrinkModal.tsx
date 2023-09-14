@@ -2,17 +2,10 @@ import { calculateUnits, convertToNumber } from "~/utils";
 import Modal from "~/components/Modal";
 import DrinkForm, { CreateDrink } from "./DrinkForm";
 import { supabase } from "~/App";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-const AddDrinkModal = ({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) => {
-  // const router = useRouter();
-
-  async function addDrink(drink: CreateDrink) {
+function useAddDrink() {
+  return useMutation(async (drink: CreateDrink) => {
     const numericVolume = convertToNumber(drink.volume);
     const numericAbv = convertToNumber(drink.abv);
 
@@ -24,14 +17,30 @@ const AddDrinkModal = ({
       measurement_unit: drink.measurementUnit,
       created_at: drink.createdAt,
     });
+  }).mutate;
+}
 
-    // router.refresh();
-    onClose();
-  }
+const AddDrinkModal = ({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) => {
+  const queryClient = useQueryClient();
+  const addDrink = useAddDrink();
 
   return (
     <Modal title="Add Drink" isOpen={isOpen} onClose={onClose} noButtons>
-      <DrinkForm onSubmit={addDrink} onClose={onClose} />
+      <DrinkForm
+        onSubmit={(drink) => {
+          addDrink(drink, {
+            onSuccess: () => queryClient.refetchQueries(["drinks"]),
+          });
+          onClose();
+        }}
+        onClose={onClose}
+      />
     </Modal>
   );
 };

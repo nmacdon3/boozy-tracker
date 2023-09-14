@@ -1,5 +1,12 @@
 import Modal from "~/components/Modal";
 import { supabase } from "~/App";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+function useDeleteDrink() {
+  return useMutation(async (drinkId: string | undefined) => {
+    await supabase.from("drinks").delete().eq("id", drinkId);
+  }).mutate;
+}
 
 const DeleteDrinkModal = ({
   drinkToDeleteId,
@@ -8,21 +15,20 @@ const DeleteDrinkModal = ({
   drinkToDeleteId: string | undefined;
   onClose: () => void;
 }) => {
-  // const router = useRouter();
-
-  async function deleteDrink() {
-    await supabase.from("drinks").delete().eq("id", drinkToDeleteId);
-
-    // router.refresh();
-    onClose();
-  }
+  const queryClient = useQueryClient();
+  const deleteDrink = useDeleteDrink();
 
   return (
     <Modal
       title="Are You Sure?"
       isOpen={!!drinkToDeleteId}
       onClose={onClose}
-      onConfirm={deleteDrink}
+      onConfirm={() => {
+        deleteDrink(drinkToDeleteId, {
+          onSuccess: () => queryClient.refetchQueries(["drinks"]),
+        });
+        onClose();
+      }}
     >
       You're about to remove this drink from your record. Are you sure you want
       to do this?
